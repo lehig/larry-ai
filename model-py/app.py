@@ -1,10 +1,19 @@
 import json
+import logging
 import os
 import time
 from typing import Dict, List
 
 from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel
+
+# Configure logging to write to model.log
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[logging.FileHandler("model.log", mode="a")]
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -41,7 +50,7 @@ def log_event(
         "method": method,
         "service": "model",
     }
-    print(json.dumps(event), flush=True)
+    logger.info(json.dumps(event))
 
 
 @app.get("/health")

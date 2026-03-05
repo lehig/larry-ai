@@ -30,21 +30,21 @@ This project is designed to reflect **real fintech ML system expectations**, not
 - [X] `.env.example` committed
 
 ## Service Health & Readiness
-- [ ] Go API exposes:
-  - [ ] `/health`
-  - [ ] `/ready`
-- [ ] Python model service exposes:
-  - [ ] `/health`
-  - [ ] `/ready`
-- [ ] Go `/ready` fails if:
-  - [ ] DB unreachable
-  - [ ] Model service unreachable
+- [X] Go API exposes:
+  - [X] `/health`
+  - [X] `/ready`
+- [X] Python model service exposes:
+  - [X] `/health`
+  - [X] `/ready`
+- [X] Go `/ready` fails if:
+  - [X] DB unreachable
+  - [X] Model service unreachable
 
 ## Logging & Traceability
-- [ ] Structured JSON logs (Go + Python)
-- [ ] Request correlation ID passed:
+- [X] Structured JSON logs (Go + Python)
+- [X] Request correlation ID passed:
   - Web → Go → Model → DB logs
-- [ ] Logs include:
+- [X] Logs include:
   - request_id
   - ticker
   - model_version

@@ -35,6 +35,13 @@ type predictResponse struct {
 }
 
 func main() {
+	logFile, err := os.OpenFile("api.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("failed to open log file: %v", err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+
 	port := envOr("PORT", "8080")
 	dsn := envOr("DB_DSN", "postgres://market_user:market_pass@localhost:5432/market?sslmode=disable")
 	modelBaseURL := strings.TrimRight(envOr("MODEL_BASE_URL", "http://localhost:8000"), "/")
@@ -173,7 +180,7 @@ func (a *App) withRequestLog(next http.HandlerFunc) http.HandlerFunc {
 			"service":       "api",
 		}
 		b, _ := json.Marshal(entry)
-		fmt.Println(string(b))
+		log.Println(string(b))
 	}
 }
 
