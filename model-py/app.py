@@ -7,11 +7,13 @@ from typing import Dict, List
 from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel
 
-# Configure logging to write to model.log
+# Configure logging to write to model.log inside LOG_DIR
+log_dir = os.getenv("LOG_DIR", ".")
+os.makedirs(log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
-    handlers=[logging.FileHandler("model.log", mode="a")]
+    handlers=[logging.FileHandler(os.path.join(log_dir, "model.log"), mode="a")]
 )
 logger = logging.getLogger(__name__)
 

@@ -35,7 +35,11 @@ type predictResponse struct {
 }
 
 func main() {
-	logFile, err := os.OpenFile("api.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logDir := envOr("LOG_DIR", ".")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Fatalf("failed to create log dir: %v", err)
+	}
+	logFile, err := os.OpenFile(logDir+"/api.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("failed to open log file: %v", err)
 	}
