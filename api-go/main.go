@@ -69,6 +69,7 @@ func main() {
 	mux.HandleFunc("/health", app.handleHealth)
 	mux.HandleFunc("/ready", app.handleReady)
 	mux.HandleFunc("/recommendation", app.withRequestLog(app.handleRecommendation))
+	mux.HandleFunc("/transform", app.withRequestLog(app.handleTransform))
 
 	server := &http.Server{
 		Addr:         ":" + port,
@@ -186,6 +187,72 @@ func (a *App) withRequestLog(next http.HandlerFunc) http.HandlerFunc {
 		b, _ := json.Marshal(entry)
 		log.Println(string(b))
 	}
+}
+
+func (a *App) handleTransform(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second) // Extended timeout for batch processing
+	defer cancel()
+
+	// This query does pure in-database forward filling for ALL tickers:
+	// 1. Find min and max dates for each ticker
+	// 2. Generate a continuous calendar for EACH ticker
+	// 3. LEFT JOIN raw_prices to expose missing days as NULL
+	// 4. Increment a "grp" tracker every time we hit a real, non-null value
+	// 5. FIRST_VALUE uses that "grp" to cascade the last known price forward
+	// 6. ON CONFLICT DO UPDATE makes it 100% idempotent if ran twice.
+	query := `
+		WITH ticker_limits AS (
+			SELECT ticker, MIN(date) AS min_date, MAX(date) AS max_date 
+			FROM raw_prices 
+			GROUP BY ticker
+		),
+		monotonic_calendar AS (
+			SELECT ticker, generate_series(min_date, max_date, '1 day'::interval)::date AS date
+			FROM ticker_limits
+		),
+		joined_data AS (
+			SELECT 
+				cal.ticker,
+				cal.date,
+				rp.open, rp.high, rp.low, rp.close, rp.volume,
+				COUNT(rp.close) OVER (PARTITION BY cal.ticker ORDER BY cal.date) AS grp
+			FROM monotonic_calendar cal
+			LEFT JOIN raw_prices rp ON cal.date = rp.date AND cal.ticker = rp.ticker
+		),
+		forward_filled AS (
+			SELECT 
+				ticker,
+				date,
+				FIRST_VALUE(open) OVER (PARTITION BY ticker, grp ORDER BY date) AS open,
+				FIRST_VALUE(high) OVER (PARTITION BY ticker, grp ORDER BY date) AS high,
+				FIRST_VALUE(low) OVER (PARTITION BY ticker, grp ORDER BY date) AS low,
+				FIRST_VALUE(close) OVER (PARTITION BY ticker, grp ORDER BY date) AS close,
+				FIRST_VALUE(volume) OVER (PARTITION BY ticker, grp ORDER BY date) AS volume
+			FROM joined_data
+		)
+		INSERT INTO clean_prices (ticker, date, open, high, low, close, volume)
+		SELECT * FROM forward_filled
+		ON CONFLICT (ticker, date) DO UPDATE SET
+			open = EXCLUDED.open,
+			high = EXCLUDED.high,
+			low = EXCLUDED.low,
+			close = EXCLUDED.close,
+			volume = EXCLUDED.volume;
+	`
+
+	res, err := a.db.ExecContext(ctx, query)
+	if err != nil {
+		log.Printf("Transform query failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to transform data"})
+		return
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":        "success",
+		"rows_upserted": rowsAffected,
+	})
 }
 
 type statusRecorder struct {

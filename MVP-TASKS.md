@@ -56,16 +56,16 @@ This project is designed to reflect **real fintech ML system expectations**, not
 # Phase 1 — Financial Data Engineering (Integrity First)
 
 ## Ingestion
-- [ ] Select data source (API or historical dataset)
-- [ ] Create `raw_prices` table
-- [ ] Unique constraint `(ticker, date)`
-- [ ] Idempotent upsert ingestion logic
+- [X] Select data source (API or historical dataset) - (yfinance: manually ingesting)
+- [X] Create `raw_prices` table
+- [X] Unique constraint `(ticker, date)`
+- [X] Idempotent upsert ingestion logic
 
 ## Data Validation
-- [ ] OHLC consistency checks
-- [ ] Null validation
-- [ ] Monotonic time enforcement
-- [ ] Volume sanity checks
+- [X] OHLC consistency checks
+- [X] Null validation
+- [X] Monotonic time enforcement
+- [X] Volume sanity checks
 
 ## Transform Layer
 - [ ] Create `features` table
